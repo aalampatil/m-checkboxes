@@ -3,22 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>1 Million Checkboxes</title>
+    <title>Checkboxes</title>
     <style>
       .checkbox {
         height: 25px;
         width: 25px;
       }
+
+      #error {
+        color: red;
+        margin-bottom: 10px;
+        font-weight: bold;
+      }
     </style>
   </head>
   <body>
     <h1>Sockets and Rate Limiting</h1>
+    <div id="error"></div>
     <div id="container"></div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
       const socket = io();
+
+      const errorDiv = document.getElementById("error"); // ✅ handle and display error
+
+      socket.on("server:error", (data) => {
+        const errorMessage = data.error || "Something went wrong";
+        errorDiv.textContent = errorMessage;
+        setTimeout(() => {
+          errorDiv.textContent = "";
+        }, 3000);
+      });
+
       socket.on("server:checkbox:change", (data) => {
-        console.log(`server:checkbox:change`, data);
+        console.log("server:checkbox:change", data);
         const { index, checked } = data;
         const input = document.getElementById(`checkbox-${index}`);
         if (input) input.checked = checked;
@@ -27,7 +45,10 @@
       const container = document.getElementById("container");
       const checkboxCount = 10;
 
-      window.addEventListener("load", async () => {
+      async function fetchStateFromServer() {
+        while (container.firstChild) {
+          container.removeChild(container.firstChild);
+        }
         const response = await fetch("/checkboxes-state", { method: "GET" });
         const data = await response.json();
         console.log(data);
@@ -36,25 +57,21 @@
             const input = document.createElement("input");
             input.type = "checkbox";
             input.id = `checkbox-${index}`;
+            input.className = "checkbox";
             input.checked = serverValue;
             input.addEventListener("change", (e) => {
               const checked = e.target.checked;
               socket.emit("client:checkbox:change", { index, checked });
+              fetchStateFromServer();
             });
             container.appendChild(input);
           });
         }
+      }
+
+      window.addEventListener("load", async () => {
+        fetchStateFromServer();
       });
-      // new Array(checkboxCount).fill(false).forEach((_, index) => {
-      //   const input = document.createElement("input");
-      //   input.type = "checkbox";
-      //   input.id = `checkbox-${index}`;
-      //   input.addEventListener("change", (e) => {
-      //     const checked = e.target.checked;
-      //     socket.emit("client:checkbox:change", { index, checked });
-      //   });
-      //   container.appendChild(input);
-      // });
     </script>
   </body>
 </html>

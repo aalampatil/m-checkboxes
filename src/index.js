@@ -6,10 +6,12 @@ import express from "express";
 import { Server } from "socket.io"
 import { publisher, subscriber, redis } from "../redis-connection.js";
 import { channel } from "node:diagnostics_channel";
-import { stat } from "node:fs";
+import { error } from "node:console";
 
 const checkbox_size = 20;
-const checkbox_state_key = "checkbox-state"
+const checkbox_state_key = "checkbox-state:v2"
+
+const rateLimitingHashMap = new Map()
 
 const setCheckBoxState = async (state) => {
   return await redis.set(checkbox_state_key, JSON.stringify(state))
@@ -50,6 +52,21 @@ async function createApp() {
     console.log("socket connected", socket.id)
     socket.on("client:checkbox:change", async (data) => {
       console.log(`socket-${socket.id}:client:checkbox:change`, data)
+      const lastOperationTime = rateLimitingHashMap.get(socket.id)
+      if (lastOperationTime) {
+        const timePassed = Date.now() - lastOperationTime;
+        const cooldown = 5.5 * 1000
+        if (timePassed < 5.5 * 1000) {
+          const remaining = cooldown - timePassed;
+
+          socket.emit("server:error", {
+            error: `Please wait ${Math.ceil(remaining / 1000)}s before trying again`
+          });
+          return;
+        }
+      }
+      rateLimitingHashMap.set(socket.id, Date.now())
+
       const state = await getOrCreateState()
       state[data.index] = data.checked;
       await setCheckBoxState(state)
