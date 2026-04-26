@@ -1,58 +1,38 @@
-import { configDotenv } from "dotenv"
-configDotenv({ path: './.env' })
-import express from "express"
-import { createServer } from "node:http"
+import { configDotenv } from "dotenv";
+configDotenv({ path: "./.env" })
+import http from "node:http"
+import path from "node:path";
+import express from "express";
 import { Server } from "socket.io"
 
-const app = express()
-const port = process.env.PORT;
-
-const server = createServer(app);
-app.use(express.static("public"))
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
-
-const TOTAL = 50000;
-const winningIndex = Math.floor(Math.random() * TOTAL);
-
-let gameOver = false;
-let clicked = new Set();
-
-io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
 
 
-  // Send initial state
-  socket.emit("init", {
-    total: TOTAL,
-    clicked: Array.from(clicked),
-    gameOver
-  });
+function createApp() {
+  const port = process.env.port ?? 8080;
+  const app = express()
+  const server = http.createServer(app)
+  const io = new Server();
+  io.attach(server)
 
-  socket.on("click", (index) => {
-    if (gameOver) return;
-    if (clicked.has(index)) return;
+  io.on("connection", (socket) => {
+    console.log("socket connected", socket.id)
+  })
 
-    clicked.add(index);
 
-    if (index === winningIndex) {
-      gameOver = true;
+  app.use(express.static("public")) //this works according to relative to cwd
+  // app.use(express.static(path.resolve("./public"))) //converts it to absolute path, ensure correct path
 
-      io.emit("winner", {
-        index,
-        code: process.env.Code
-      });
-    } else {
-      io.emit("miss", { index });
-    }
-  });
+  // app.get("/", (req, res) => {
+  //   res.send("100 Check Boxes - Scaling Web Sockets n*n")
+  // })
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
-});
+  app.get("/health", (req, res) => {
+    res.send("System Status - GOOD")
+  })
 
-server.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+  server.listen(port, () => {
+    console.log(`server is listening on http://localhost:${port}`)
+  })
+}
+
+createApp()
