@@ -4,6 +4,12 @@ import http from "node:http"
 import path from "node:path";
 import express from "express";
 import { Server } from "socket.io"
+import { stat } from "node:fs";
+
+const checkbox_size = 20;
+const state = {
+  checkboxes: new Array(checkbox_size).fill(false)
+}
 
 
 
@@ -26,9 +32,11 @@ function createApp() {
   app.use(express.static("public")) //this works according to relative to cwd
   // app.use(express.static(path.resolve("./public"))) //converts it to absolute path, ensure correct path
 
-
   app.get("/health", (req, res) => {
     res.send("System Status - GOOD")
+  })
+  app.get("/checkboxes-state", (req, res) => {
+    return res.status(200).json({ checkboxes: state.checkboxes })
   })
 
   server.listen(port, () => {

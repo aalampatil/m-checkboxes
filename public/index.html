@@ -26,16 +26,35 @@
 
       const container = document.getElementById("container");
       const checkboxCount = 10;
-      new Array(checkboxCount).fill(false).forEach((_, index) => {
-        const input = document.createElement("input");
-        input.type = "checkbox";
-        input.id = `checkbox-${index}`;
-        input.addEventListener("change", (e) => {
-          const checked = e.target.checked;
-          socket.emit("client:checkbox:change", { index, checked });
-        });
-        container.appendChild(input);
+
+      window.addEventListener("load", async () => {
+        const response = await fetch("/checkboxes-state", { method: "GET" });
+        const data = await response.json();
+        console.log(data);
+        if (data && data.checkboxes) {
+          data.checkboxes.forEach((serverValue, index) => {
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.id = `checkbox-${index}`;
+            input.checked = serverValue;
+            input.addEventListener("change", (e) => {
+              const checked = e.target.checked;
+              socket.emit("client:checkbox:change", { index, checked });
+            });
+            container.appendChild(input);
+          });
+        }
       });
+      // new Array(checkboxCount).fill(false).forEach((_, index) => {
+      //   const input = document.createElement("input");
+      //   input.type = "checkbox";
+      //   input.id = `checkbox-${index}`;
+      //   input.addEventListener("change", (e) => {
+      //     const checked = e.target.checked;
+      //     socket.emit("client:checkbox:change", { index, checked });
+      //   });
+      //   container.appendChild(input);
+      // });
     </script>
   </body>
 </html>
