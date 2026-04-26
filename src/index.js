@@ -16,15 +16,16 @@ function createApp() {
 
   io.on("connection", (socket) => {
     console.log("socket connected", socket.id)
+    socket.on("client:checkbox:change", (data) => {
+      console.log(`socket-${socket.id}:client:checkbox:change`, data)
+      io.emit("server:checkbox:change", data)
+    })
   })
 
 
   app.use(express.static("public")) //this works according to relative to cwd
   // app.use(express.static(path.resolve("./public"))) //converts it to absolute path, ensure correct path
 
-  // app.get("/", (req, res) => {
-  //   res.send("100 Check Boxes - Scaling Web Sockets n*n")
-  // })
 
   app.get("/health", (req, res) => {
     res.send("System Status - GOOD")
